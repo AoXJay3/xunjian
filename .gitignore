@@ -1,0 +1,24 @@
+# Go build
+
+*.exe
+*.out
+*.test
+bin/
+
+# Go module cache
+vendor/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
+# config / secret
+*.env
+config.yaml
+
+# input / output
+*.csv
+*.txt
