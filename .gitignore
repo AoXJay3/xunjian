@@ -22,3 +22,5 @@ config.yaml
 # input / output
 *.csv
 *.txt
+
+xunjian
