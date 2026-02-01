@@ -28,6 +28,9 @@ func findACDvr(respAC []DeviceRespRow, mac string) (int, error) {
 	return 0, nil
 }
 
+// dbDvrMap,err := queryCoreDevice(db,macList)
+
+// for _,dp := range dbDvrMap
 // func compareDvr(macList []string) error {
 
 // }

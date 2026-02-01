@@ -74,7 +74,7 @@ func main() {
 		// 使用queryDevice函数获取设备信息
 		resp, err := queryDevice(client, mac)
 		if err != nil {
-			fmt.Printf("%s查询失败，失败原因：%s\n", mac, err)
+			fmt.Println(err)
 			continue
 		}
 
@@ -125,6 +125,10 @@ func main() {
 
 	}
 
-	// 获取信息
+	// dbDvrMap := make(map[string]int)
+
+	// for _,dp := range result{
+	// 	dbDvrMap[dp.DeviceID] = dp.DvrDays
+	// }
 
 }

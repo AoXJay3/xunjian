@@ -2,9 +2,11 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"strings"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -25,16 +27,24 @@ func testJoinMysql() error {
 
 // 创建连接,输出一个sql.DB连接池的
 func openDB() (*sql.DB, error) {
-	dsn := "go_user:Axj123456!@tcp(10.12.29.23:13306)/core_data?charset=utf8mb4&parseTime=true&loc=Local"
+	dsn := "go_user:Axj123456!@tcp(10.12.29.23:13306)/core_data" +
+		"?charset=utf8mb4&parseTime=true&loc=Local" +
+		"&timeout=3s&readTimeout=3s&writeTimeout=3s" // 增加 db 读写的超时时间
+
 	// sql.Open创建数据库句柄，并没有真实连接
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		return nil, err
 	}
-	// 使用db.Ping()才能测试连通性
-	if err := db.Ping(); err != nil {
+
+	// 使用 db.PingContext 测试连通性，db.Ping 没有超时控制，前者更可控
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	if err := db.PingContext(ctx); err != nil {
+		db.Close()
 		return nil, err
 	}
+
 	return db, nil
 
 }
@@ -70,11 +80,10 @@ func queryCoreDevice(db *sql.DB, MacList []string) ([]DevicePackage, error) {
 	}
 	defer rows.Close()
 
-	// 定义一个切片用于存储 db 中查询的信息
-	var devicePackageList []DevicePackage
+	var devicePackageList []DevicePackage // 定义一个切片用于存储 db 中查询的信息
 	for rows.Next() {
 		var dp DevicePackage
-		err := rows.Scan(
+		err := rows.Scan( // 数据写入变量中
 			&dp.Did,
 			&dp.Uid,
 			&dp.ClientID,

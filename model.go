@@ -22,6 +22,7 @@ type DeviceRespRow struct {
 	Region       string
 	ServiceName  string
 	UID          string
+	DvrDays      int
 	//DID string
 }
 
@@ -54,4 +55,11 @@ type CoreDeviceRow struct {
 	Device_id string
 	End_time  string
 	Dvr_days  int
+}
+
+// 套餐天数检查
+type PackageCheck struct {
+	DeviceID string
+	ACDays   int
+	DBDays   int
 }

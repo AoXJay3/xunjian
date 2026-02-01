@@ -64,24 +64,33 @@ func queryDevice(client *http.Client, mac string) (*DeviceRespRow, error) {
 
 	// fmt.Println("resp.Body为：", resp.Body)
 	// resp.Body返回的不是字符串，也不是[]byte，而是stream，使用ReadAll将响应体变成[]byte，用于后续打印/转Json
-	body, _ := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("读取响应体失败: %w", err)
+	}
 
 	var result DeviceResp
 	// 增加错误排查，如果存在，则返回错误内容的前300字符
 	if err := json.Unmarshal(body, &result); err != nil { // Unmarshal(b []byte, v any)，将字节数据的内容传入第二个参数指针
-		fmt.Println("返回内容前 300 字符")
-		fmt.Println(string(body[:min(300, len(body))]))
-		return nil, err
+		//fmt.Println("返回内容前 300 字符")
+		previewLen := min(300, len(body))
+		preview := string(body[:previewLen])
+		return nil, fmt.Errorf("设备 %s 查询AC数据失败 %w, 返回前300行:\n%s", mac, err, preview)
+
 	}
 	// 如果返回的数据中，字段长度为空，则判断为未查询到
 	if len(result.Result.Rows) == 0 {
-		return nil, fmt.Errorf("未查询到设备")
+		return nil, fmt.Errorf("未查询到设备%s", mac)
 	}
 
 	row := result.Result.Rows[0] // []struct{...}
 
-	// 增加套餐判断
-	// compareDvr
+	// 增加设备套餐天数
+	var dvrDays int
+	if row.ServiceName == "" {
+		dvrDays = 0
+	}
+	//dvrDays = strings.Split(row.ServiceName,"-")[0]
 
 	return &DeviceRespRow{
 		DeviceID:     row.DeviceID,
@@ -89,6 +98,7 @@ func queryDevice(client *http.Client, mac string) (*DeviceRespRow, error) {
 		Region:       row.Region,
 		ServiceName:  row.ServiceName,
 		UID:          row.UID,
+		DvrDays:      dvrDays,
 	}, nil
 
 }
