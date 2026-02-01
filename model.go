@@ -12,6 +12,8 @@ type DeviceResp struct {
 			Region       string `json:"region"`
 			ServiceName  string `json:"servicename"`
 			UID          string `json:"uid"`
+			DID          string `json:"did"`
+			DvrDays      int
 		} `json:"rows"` // 标签
 	} `json:"result"`
 }
@@ -22,6 +24,7 @@ type DeviceRespRow struct {
 	Region       string
 	ServiceName  string
 	UID          string
+	DID          string
 	DvrDays      int
 	//DID string
 }

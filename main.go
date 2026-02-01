@@ -80,14 +80,15 @@ func main() {
 
 		respAC = append(respAC, *resp)
 
-		// 如果要输出到控制台
-		fmt.Printf("%s,%s,%s,%s,%s\n",
-			resp.DeviceID,
-			resp.OnlineStatus,
-			resp.ServiceName,
-			resp.Region,
-			resp.UID,
-		)
+		// // 如果要输出到控制台
+		// fmt.Printf("%s,%s,%s,%s,%s,%s\n",
+		// 	resp.DeviceID,
+		// 	resp.OnlineStatus,
+		// 	resp.ServiceName,
+		// 	resp.Region,
+		// 	resp.UID,
+		// 	resp.DID,
+		// )
 
 		// 写入文件
 		writer.Write([]string{
@@ -96,6 +97,7 @@ func main() {
 			resp.ServiceName,
 			resp.Region,
 			resp.UID,
+			resp.DID,
 		})
 
 		time.Sleep(50 * time.Microsecond)
@@ -105,7 +107,7 @@ func main() {
 
 	fmt.Println("完成，结果已写入:", outputCSV)
 
-	// 前面通过查询AC接口获取到设备相关信息，下面进行查库核实套餐信息并补足其他信息：did
+	// 前面通过查询AC接口获取到设备相关信息，下面进行查库核实套餐信息
 	// 连接数据库
 	db, err := openDB()
 	if err != nil {
@@ -118,17 +120,31 @@ func main() {
 	if err != nil {
 		fmt.Println("获取core_data数据失败，失败原因:", err)
 	}
-	//fmt.Println("获取core_data数据成功:", result)
-	for _, macInfo := range result {
 
-		fmt.Printf("deviceId:%s,uid:%d,did:%d,dvrDays:%d\n", macInfo.DeviceID, macInfo.Uid, macInfo.Did, macInfo.DvrDays)
+	// // 控制台展示 DB 数据
+	// for _, macInfo := range result {
+	// 	fmt.Printf("deviceId:%s,uid:%d,did:%d,dvrDays:%d\n", macInfo.DeviceID, macInfo.Uid, macInfo.Did, macInfo.DvrDays)
+	// }
 
+	ACDvrMap := make(map[string]int)
+	DBDvrMap := make(map[string]int)
+
+	for _, dp := range respAC {
+		ACDvrMap[dp.DeviceID] = dp.DvrDays
+	}
+	for _, dp := range result {
+		DBDvrMap[dp.DeviceID] = dp.DvrDays
 	}
 
-	// dbDvrMap := make(map[string]int)
+	var dvrNotSameDevice []string
+	for device_id, _ := range ACDvrMap {
+		if ACDvrMap[strings.ToLower(device_id)] != DBDvrMap[strings.ToLower(device_id)] {
+			dvrNotSameDevice = append(dvrNotSameDevice, device_id)
+			continue
+		}
+		continue
+	}
 
-	// for _,dp := range result{
-	// 	dbDvrMap[dp.DeviceID] = dp.DvrDays
-	// }
+	fmt.Printf("套餐不一致的设备有%d个:%s\n", len(dvrNotSameDevice), dvrNotSameDevice)
 
 }

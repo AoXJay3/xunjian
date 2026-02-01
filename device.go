@@ -10,41 +10,6 @@ import (
 	"strings"
 )
 
-// 解析 AC 套餐天数
-func parseDaysFromServiceName(serviceName string) (int, error) {
-	if serviceName == "" {
-		return 0, fmt.Errorf("serviceName 为空")
-	}
-	svcDayStr := strings.Split(serviceName, "-")
-	if len(serviceName) < 2 {
-		return 0, fmt.Errorf("serviceName 格式不合法")
-	}
-	svcDayInt, err := strconv.Atoi(svcDayStr[0])
-	if err != nil {
-		return 0, fmt.Errorf("serviceName 天数不是数字: %s", serviceName)
-	}
-	return svcDayInt, nil
-
-}
-
-// // 从 AC 获取数据是针对单个设备的，从 core_data 获取数据是批量查的，所以对 AC 获取设备信息的函数中增加核对 core_data 中套餐是否一致
-// func compareDvr(drr *DeviceRespRow, devicePackageList []DevicePackage) bool{
-// 	// 确认 AC mac数据
-// 	ACMac := row.DeviceID
-// 	ACDvr := row.ServiceName
-
-// 	// 获取 coreDvr 数据
-// 	for _, DevicePackage := range devicePackageList{
-// 		if ACMac != DevicePackage.ClientID{
-// 			continue
-// 		}
-
-// 		coreDvr := DevicePackage.DvrDays // int
-
-// 	}
-
-// }
-
 // 请求获取设备数据，传参包含client实例、mac地址，输出指针和错误
 func queryDevice(client *http.Client, mac string) (*DeviceRespRow, error) {
 	url := fmt.Sprintf(
@@ -62,12 +27,12 @@ func queryDevice(client *http.Client, mac string) (*DeviceRespRow, error) {
 	}
 	defer resp.Body.Close()
 
-	// fmt.Println("resp.Body为：", resp.Body)
 	// resp.Body返回的不是字符串，也不是[]byte，而是stream，使用ReadAll将响应体变成[]byte，用于后续打印/转Json
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("读取响应体失败: %w", err)
 	}
+	// fmt.Println(string(body)) // 查看响应原始数据
 
 	var result DeviceResp
 	// 增加错误排查，如果存在，则返回错误内容的前300字符
@@ -83,14 +48,26 @@ func queryDevice(client *http.Client, mac string) (*DeviceRespRow, error) {
 		return nil, fmt.Errorf("未查询到设备%s", mac)
 	}
 
-	row := result.Result.Rows[0] // []struct{...}
+	row := result.Result.Rows[0] // eg.{xxxxS_e02efe80c2d1 1 cd-ydy 30-day recording 60056380 142719078}
 
-	// 增加设备套餐天数
-	var dvrDays int
-	if row.ServiceName == "" {
-		dvrDays = 0
-	}
-	//dvrDays = strings.Split(row.ServiceName,"-")[0]
+	// 从 AC 中获取到套餐天数
+	dvrDays, err := func() (int, error) {
+		if row.ServiceName == "" {
+			return 0, nil
+		}
+		if len(row.ServiceName) < 2 {
+			return 0, fmt.Errorf("%s格式不合法", row.ServiceName)
+		}
+		serviceNameDay := strings.Split(row.ServiceName, "-")[0]
+		serviceNameDayInt, err := strconv.Atoi(serviceNameDay)
+		if err != nil {
+			return 0, fmt.Errorf("ServiceName 套餐天数不是数字: %s", row.ServiceName)
+		}
+
+		return serviceNameDayInt, nil
+	}()
+
+	row.DvrDays = dvrDays // 将ServiceName中获取的天数给到响应体内
 
 	return &DeviceRespRow{
 		DeviceID:     row.DeviceID,
@@ -98,6 +75,7 @@ func queryDevice(client *http.Client, mac string) (*DeviceRespRow, error) {
 		Region:       row.Region,
 		ServiceName:  row.ServiceName,
 		UID:          row.UID,
+		DID:          row.DID,
 		DvrDays:      dvrDays,
 	}, nil
 

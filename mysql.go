@@ -70,8 +70,13 @@ func queryCoreDevice(db *sql.DB, MacList []string) ([]DevicePackage, error) {
 	}
 	// 将占位符给到 sql 语句中
 	sqlStr := fmt.Sprintf(`select 
-		did,uid,client_id,device_id,service_id,start_time,end_time,dvr_days,clip_hours,state_code,create_time,modify_time
- 		from core_data.device_package where device_id in (%s)`,
+		d.did,d.uid,d.client_id,d.device_id,d.service_id,d.start_time,d.end_time,d.dvr_days,d.clip_hours,d.state_code,d.create_time,d.modify_time
+ 		from core_data.device_package d
+		join (
+			select device_id,max(modify_time) as max_modify_time from core_data.device_package where device_id in (%s)
+			group by device_id
+		) latest
+		on d.device_id = latest.device_id and d.modify_time = latest.max_modify_time;`,
 		strings.Join(placeholders, ",")) // "?,?,..."
 	// 使用db.Query对数据库进行查询，传参：sqlStr-->sql查询语句，args的类型为...any，代表可变数量的任意类型参数，返回查询结果Rows和一个error
 	rows, err := db.Query(sqlStr, args...) // 传参sql语句，后跟mac1,mac2,...,批量查询
