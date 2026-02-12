@@ -2,10 +2,13 @@ package main
 
 import (
 	"encoding/csv"
+	"flag"
 	"fmt"
+	"log"
 	"net/http"
 	"net/http/cookiejar"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -17,13 +20,33 @@ const (
 	baseURL = "https://cjoint.reservehemu.cn"
 )
 
+var (
+	configPath string
+	outDir     string
+	macs       string
+)
+
+func init() {
+	flag.StringVar(&configPath, "c", "", "config file path")
+	flag.StringVar(&outDir, "out", ".", "csv 输出目录")
+	flag.StringVar(&macs, "macs", "", "设备MAC，逗号分隔")
+}
+
 func main() {
-	if len(os.Args) < 2 {
-		fmt.Println("请传入设备MAC，支持逗号分隔")
-		os.Exit(1)
+	flag.Parse() // 解析参数
+
+	cfg, err := loadConfig(configPath) // 加载配置
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	macList := strings.Split(os.Args[1], ",") // macList-->[mac1 mac2 mac3]
+	// 设备清单，传参macs即使用，不传参使用默认configpath中的数据
+	var macList []string // macList-->[mac1 mac2 mac3]
+	if macs != "" {
+		macList = strings.Split(macs, ",")
+	} else {
+		macList = cfg.Inspect.Macs
+	}
 
 	// 建立持久会话
 	// jar类似python中的session，cookiejar是go标准库中的cookie管理器
@@ -46,12 +69,16 @@ func main() {
 		panic(err)
 	}
 
-	// 创建CSV文件名称
+	// 创建CSV文件名称 + 创建CSV文件
 	now := time.Now()
 	nowStr := now.Format("20060102")
-	outputCSV := "xunjian" + nowStr + ".csv"
+	filename := "xunjian" + nowStr + ".csv"
+	outputCSV := filepath.Join(outDir, filename)
 
-	// 创建CSV文件
+	if err := os.MkdirAll(outDir, 0750); err != nil {
+		log.Fatalf("创建目录失败: %v", err)
+	}
+
 	file, err := os.Create(outputCSV)
 	if err != nil {
 		panic(err)

@@ -66,3 +66,9 @@ type PackageCheck struct {
 	ACDays   int
 	DBDays   int
 }
+
+type Config struct {
+	Inspect struct {
+		Macs []string `yaml:"macs"`
+	} `yaml:"inspect"`
+}
