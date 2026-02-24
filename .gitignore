@@ -23,4 +23,7 @@ config.yaml
 *.csv
 *.txt
 
+# 备份
+*.bak
+
 xunjian

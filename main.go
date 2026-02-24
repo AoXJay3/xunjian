@@ -27,17 +27,23 @@ var (
 )
 
 func init() {
-	flag.StringVar(&configPath, "c", "", "config file path")
-	flag.StringVar(&outDir, "out", ".", "csv 输出目录")
+	flag.StringVar(&configPath, "c", "/home/viccsre/axj/xunjian/conf/config.yaml", "config file path") // 一号机的目录
+	//flag.StringVar(&configPath, "c", "config.yaml", "config file path") //开发环境目录
+	flag.StringVar(&outDir, "out", "/data/axj/xunjian/data/", "csv 输出目录")
 	flag.StringVar(&macs, "macs", "", "设备MAC，逗号分隔")
 }
 
 func main() {
 	flag.Parse() // 解析参数
 
+	logDir := "/data/axj/xunjian/logs"
+	initLogger(logDir)
+	log.Println("INFO xunjian start")
+
 	cfg, err := loadConfig(configPath) // 加载配置
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("加载配置失败: %v", err)
+		fmt.Printf("加载配置失败: %v", err)
 	}
 
 	// 设备清单，传参macs即使用，不传参使用默认configpath中的数据
@@ -132,7 +138,8 @@ func main() {
 	}
 	// fmt.Println("第一个respAC为：", respAC[0])
 
-	fmt.Println("完成，结果已写入:", outputCSV)
+	fmt.Printf("完成，结果已写入: %s\n", outputCSV)
+	log.Printf("完成，结果已写入: %s\n", outputCSV)
 
 	// 前面通过查询AC接口获取到设备相关信息，下面进行查库核实套餐信息
 	// 连接数据库
@@ -172,6 +179,12 @@ func main() {
 		continue
 	}
 
-	fmt.Printf("套餐不一致的设备有%d个:%s\n", len(dvrNotSameDevice), dvrNotSameDevice)
+	if len(dvrNotSameDevice) == 0 {
+		fmt.Println("套餐检查正常：无不一致设备")
+		log.Println("套餐检查正常：无不一致设备")
+	} else {
+		fmt.Printf("发现套餐不一致设备 %d 个: %v\n", len(dvrNotSameDevice), dvrNotSameDevice)
+		log.Printf("WARN: 发现套餐不一致设备 %d 个: %v\n", len(dvrNotSameDevice), dvrNotSameDevice)
+	}
 
 }
